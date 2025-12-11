@@ -2,57 +2,99 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>FoolsTool - Chrome Ver</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoolsTool - Ultimate Debugger</title>
+    <style>
+        body { background-color: #121212; color: #fff; font-family: sans-serif; padding: 20px; }
+        .control-panel { background: #333; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        select, button { padding: 10px; margin: 5px 0; font-size: 16px; border-radius: 4px; border: none; }
+        button { background-color: #4CAF50; color: white; cursor: pointer; }
+        button:hover { background-color: #45a049; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+        .card { background: #222; border-radius: 8px; overflow: hidden; border: 1px solid #444; }
+        .card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; }
+        .card-content { padding: 10px; }
+        .card h4 { margin: 0; font-size: 14px; line-height: 1.4; }
+        #status { font-weight: bold; margin-bottom: 10px; color: #aaa; }
+    </style>
 </head>
-<body style="background-color: #121212; color: white; font-family: sans-serif; padding: 20px;">
+<body>
 
-    <h1>FoolsTool (Direct Connect)</h1>
-    <div id="status">サーバーに接続中...</div>
-    <div id="video-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;"></div>
+    <h1>FoolsTool: Ultimate Debugger</h1>
+    
+    <div class="control-panel">
+        <label>1. サーバーを選ぶ:</label><br>
+        <select id="server-select">
+            <option value="https://yewtu.be">yewtu.be (ド定番・安定)</option>
+            <option value="https://inv.tux.pizza">inv.tux.pizza (高速)</option>
+            <option value="https://vid.puffyan.us">vid.puffyan.us (予備)</option>
+            <option value="https://invidious.drgns.space">drgns.space (予備2)</option>
+        </select>
+        <br><br>
+        
+        <label>2. 魔法(プロキシ)を選ぶ:</label><br>
+        <select id="proxy-select">
+            <option value="https://corsproxy.io/?">CorsProxy (最強・推奨)</option>
+            <option value="https://api.allorigins.win/raw?url=">AllOrigins (予備)</option>
+            <option value="">なし (直結・運試し)</option>
+        </select>
+        <br><br>
+
+        <button onclick="startLoad()">接続テスト開始</button>
+    </div>
+
+    <div id="status">設定を選んで「接続テスト開始」を押してください</div>
+    <div id="video-list" class="grid"></div>
 
     <script>
-        // ---------------------------------------------------
-        // 【決定版】Chromeならこれで動く！
-        // ---------------------------------------------------
-        
-        // プロキシは使いません（不安定なため）
-        // その代わり、外部接続を許可している「tux.pizza」を使います
-        const TARGET_SERVER = "https://inv.tux.pizza"; 
-
-        // 予備のサーバー（もし上がダメならこっちに書き換えてください）
-        // const TARGET_SERVER = "https://yewtu.be";
-        // const TARGET_SERVER = "https://vid.puffyan.us";
-
-        // ---------------------------------------------------
-
-        async function loadPopularVideos() {
+        async function startLoad() {
+            const server = document.getElementById("server-select").value;
+            const proxy = document.getElementById("proxy-select").value;
             const status = document.getElementById("status");
             const list = document.getElementById("video-list");
 
+            // 画面リセット
+            list.innerHTML = "";
+            status.innerHTML = "🔄 通信中...";
+            status.style.color = "yellow";
+
             try {
-                // APIのURLを作る
-                const url = TARGET_SERVER + "/api/v1/popular";
-                console.log("ここにアクセスします:", url);
-
-                const response = await fetch(url);
-
-                if (!response.ok) {
-                    throw new Error(`サーバーエラー: ${response.status}`);
+                // URLを組み立てる
+                // プロキシがある場合はエンコード(URL文字変換)が必要
+                let finalUrl = "";
+                if (proxy) {
+                    finalUrl = proxy + encodeURIComponent(server + "/api/v1/popular");
+                } else {
+                    finalUrl = server + "/api/v1/popular";
                 }
 
-                const videos = await response.json();
+                console.log("Target URL:", finalUrl);
 
-                // 成功表示
-                status.innerHTML = `<h3 style="color: #4CAF50;">接続成功！ (${TARGET_SERVER})</h3>`;
+                const response = await fetch(finalUrl);
                 
-                // 動画を並べる
-                videos.forEach(video => {
+                if (!response.ok) {
+                    throw new Error(`サーバー拒否 (${response.status})`);
+                }
+
+                const data = await response.json();
+
+                // 成功！
+                status.innerHTML = `✅ 成功！ (Server: ${new URL(server).hostname})`;
+                status.style.color = "#4CAF50";
+
+                data.slice(0, 10).forEach(video => {
+                    // 画像のURLもプロキシを通さないと表示されないことがあるので調整
+                    let imgUrl = video.videoThumbnails[0].url;
+                    // 画像URLが / で始まる相対パスの場合の対策
+                    if (!imgUrl.startsWith("http")) {
+                        imgUrl = server + imgUrl;
+                    }
+
                     list.innerHTML += `
-                        <div style="background: #222; border-radius: 10px; overflow: hidden;">
-                            <img src="${video.videoThumbnails[0].url}" style="width: 100%; aspect-ratio: 16/9; object-fit: cover;">
-                            <div style="padding: 10px;">
-                                <h4 style="margin: 0 0 10px 0; font-size: 16px;">${video.title}</h4>
-                                <p style="color: #aaa; font-size: 12px;">再生回数: ${video.viewCountText || "不明"}</p>
+                        <div class="card">
+                            <img src="${imgUrl}" loading="lazy">
+                            <div class="card-content">
+                                <h4>${video.title}</h4>
                             </div>
                         </div>
                     `;
@@ -60,15 +102,10 @@
 
             } catch (error) {
                 console.error(error);
-                status.innerHTML = `
-                    <h3 style="color: #ff5555;">接続失敗...</h3>
-                    <p>エラー内容: ${error.message}</p>
-                    <p>もしかすると、数分待つか、サーバーURLを予備のものに変えてみてください。</p>
-                `;
+                status.innerHTML = `❌ 失敗: ${error.message}<br>別の組み合わせを試してください`;
+                status.style.color = "#ff5555";
             }
         }
-
-        loadPopularVideos();
     </script>
 </body>
 </html>
