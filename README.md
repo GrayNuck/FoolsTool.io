@@ -1,0 +1,2 @@
+# foolstool.io
+Githubwebpageからyoutbeを視聴可能としたtool
