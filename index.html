@@ -2,73 +2,66 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>FoolsTool - Home Dev</title>
+    <title>FoolsTool - Proxy Ver</title>
 </head>
-<body style="background-color: #1a1a1a; color: white; font-family: sans-serif;">
+<body style="background-color: #000; color: #0f0; font-family: monospace; padding: 20px;">
 
-    <h1>FoolsTool (Home Ver)</h1>
-    <div id="video-list">読み込み中...</div>
+    <h2>通信テスト: Strong Proxy</h2>
+    <div id="status">接続試行中...</div>
+    <div id="video-list"></div>
 
     <script>
         // ---------------------------------------------------
-        // 【修正版】家で開発するための設定
+        // 設定: 強力なプロキシを使う
         // ---------------------------------------------------
         
-        // ★重要：このサーバーはCORS設定が緩いので、プロキシなしで繋がります
-        // もしダメなら "https://invidious.drgns.space" を試してください
-        const TARGET_SERVER = "https://inv.tux.pizza"; 
+        // ターゲット: 比較的安定しているサーバー
+        const TARGET = "https://invidious.drgns.space/api/v1/popular";
         
-        // ★重要：家ではプロキシを使いません（空にする）
-        // プロキシを通すと逆にブロックされることがあるためです
-        const PROXY_URL = ""; 
+        // プロキシ: corsproxy.io (alloriginsより制限が緩いことが多い)
+        const PROXY = "https://corsproxy.io/?";
 
         // ---------------------------------------------------
 
-        async function loadPopularVideos() {
+        async function tryConnect() {
+            const status = document.getElementById("status");
             const list = document.getElementById("video-list");
 
-            try {
-                // そのままのURLでアクセス
-                const finalUrl = TARGET_SERVER + "/api/v1/popular";
-                console.log("アクセス中:", finalUrl);
+            // 最終的なURL: プロキシの後ろにターゲットURLをくっつける
+            // encodeURIComponentを使ってURLを「文字」として正しく渡す
+            const finalUrl = PROXY + encodeURIComponent(TARGET);
 
+            status.innerHTML += `<br>アクセス先: ${finalUrl}<br>`;
+
+            try {
                 const response = await fetch(finalUrl);
-                
-                // エラーチェック（HTMLが返ってきていないか確認）
-                const contentType = response.headers.get("content-type");
-                if (contentType && contentType.indexOf("application/json") === -1) {
-                    // JSONじゃないものが返ってきたらテキストとして表示（デバッグ用）
-                    const text = await response.text();
-                    throw new Error("JSONではなくHTMLが返ってきました。中身: " + text.substring(0, 100));
-                }
 
                 if (!response.ok) {
-                    throw new Error("サーバーエラー: " + response.status);
+                    throw new Error(`サーバーエラー: ${response.status}`);
                 }
 
-                const videos = await response.json();
-
-                // 成功したら表示
-                list.innerHTML = ""; 
-                videos.forEach(video => {
+                const data = await response.json();
+                
+                status.innerHTML = `<h2 style="color:cyan">成功しました！</h2>`;
+                
+                // データ表示
+                data.slice(0, 5).forEach(video => {
                     list.innerHTML += `
-                        <div style="margin-bottom: 20px; border: 1px solid #333; padding: 10px;">
-                            <h3>${video.title}</h3>
-                            <img src="${video.videoThumbnails[0].url}" width="300">
+                        <div style="border:1px solid #333; margin:10px; padding:10px;">
+                            <img src="${PROXY + encodeURIComponent(video.videoThumbnails[0].url)}" width="150"><br>
+                            <b>${video.title}</b>
                         </div>
                     `;
                 });
 
-            } catch (error) {
-                console.error(error);
-                list.innerHTML = `
-                    <h3 style="color: red;">エラー発生</h3>
-                    <p>${error.message}</p>
-                `;
+            } catch (err) {
+                console.error(err);
+                status.innerHTML += `<br><strong style="color:red">失敗: ${err.message}</strong>`;
+                status.innerHTML += `<br>ヒント: BraveのシールドをOFFにしてください`;
             }
         }
 
-        loadPopularVideos();
+        tryConnect();
     </script>
 </body>
 </html>
