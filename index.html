@@ -1,34 +1,67 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyTube for School</title>
+</head>
 <body>
-    <h1>Fools'Tool</h1>
+    <h1>MyTube</h1>
     <div id="video-list">読み込み中...</div>
 
     <script>
-        // あなたが見つけたサーバーを指定
-        const DOMAIN = "https://invidious.drgns.space";
+        // ---------------------------------------------------
+        // 設定エリア
+        // ---------------------------------------------------
+        
+        // ターゲットにするInvidiousサーバー
+        const TARGET_SERVER = "https://invidious.f5.si"; 
+        
+        // 魔法の仲介役（CORSプロキシ）
+        // これを通すとSafariでも怒られなくなります
+        const PROXY_URL = "https://api.allorigins.win/raw?url=";
+
+        // ---------------------------------------------------
 
         async function loadPopularVideos() {
+            const list = document.getElementById("video-list");
+
             try {
-                // 人気の動画データをAPIからもらう
-                const response = await fetch(DOMAIN + "/api/v1/popular");
+                // URLを合体させる（プロキシ + サーバー + APIのパス）
+                const apiUrl = PROXY_URL + encodeURIComponent(TARGET_SERVER + "/api/v1/popular");
+                
+                console.log("ここにアクセスします:", apiUrl);
+
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error("サーバーがエラーを返しました");
+                }
+
                 const videos = await response.json();
 
-                // 画面に表示する
-                const list = document.getElementById("video-list");
-                list.innerHTML = ""; // 「読み込み中」を消す
+                // 画面をリセット
+                list.innerHTML = ""; 
 
                 videos.forEach(video => {
-                    // 動画のタイトルと画像を並べる
+                    // 動画IDを使ってサムネイルを表示
+                    // （サムネ画像もプロキシを通さないと表示されない場合がありますが一旦直で試します）
                     list.innerHTML += `
-                        <div style="margin-bottom: 20px;">
+                        <div style="margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
                             <h3>${video.title}</h3>
-                            <img src="${video.videoThumbnails[0].url}" width="300">
+                            <p>再生回数: ${video.viewCountText}</p>
+                            <img src="${video.videoThumbnails[0].url}" width="300" style="max-width:100%;">
                         </div>
                     `;
                 });
+
             } catch (error) {
-                alert("エラー！データの取得に失敗しました: " + error);
+                console.error(error);
+                list.innerHTML = `
+                    <h3 style="color: red;">エラーが発生しました</h3>
+                    <p>学校のフィルターで「api.allorigins.win」か「${TARGET_SERVER}」がブロックされている可能性があります。</p>
+                    <p>詳細: ${error}</p>
+                `;
             }
         }
 
