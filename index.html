@@ -2,66 +2,73 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>FoolsTool - Proxy Ver</title>
+    <title>FoolsTool - Chrome Ver</title>
 </head>
-<body style="background-color: #000; color: #0f0; font-family: monospace; padding: 20px;">
+<body style="background-color: #121212; color: white; font-family: sans-serif; padding: 20px;">
 
-    <h2>通信テスト: Strong Proxy</h2>
-    <div id="status">接続試行中...</div>
-    <div id="video-list"></div>
+    <h1>FoolsTool (Direct Connect)</h1>
+    <div id="status">サーバーに接続中...</div>
+    <div id="video-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;"></div>
 
     <script>
         // ---------------------------------------------------
-        // 設定: 強力なプロキシを使う
+        // 【決定版】Chromeならこれで動く！
         // ---------------------------------------------------
         
-        // ターゲット: 比較的安定しているサーバー
-        const TARGET = "https://invidious.drgns.space/api/v1/popular";
-        
-        // プロキシ: corsproxy.io (alloriginsより制限が緩いことが多い)
-        const PROXY = "https://corsproxy.io/?";
+        // プロキシは使いません（不安定なため）
+        // その代わり、外部接続を許可している「tux.pizza」を使います
+        const TARGET_SERVER = "https://inv.tux.pizza"; 
+
+        // 予備のサーバー（もし上がダメならこっちに書き換えてください）
+        // const TARGET_SERVER = "https://yewtu.be";
+        // const TARGET_SERVER = "https://vid.puffyan.us";
 
         // ---------------------------------------------------
 
-        async function tryConnect() {
+        async function loadPopularVideos() {
             const status = document.getElementById("status");
             const list = document.getElementById("video-list");
 
-            // 最終的なURL: プロキシの後ろにターゲットURLをくっつける
-            // encodeURIComponentを使ってURLを「文字」として正しく渡す
-            const finalUrl = PROXY + encodeURIComponent(TARGET);
-
-            status.innerHTML += `<br>アクセス先: ${finalUrl}<br>`;
-
             try {
-                const response = await fetch(finalUrl);
+                // APIのURLを作る
+                const url = TARGET_SERVER + "/api/v1/popular";
+                console.log("ここにアクセスします:", url);
+
+                const response = await fetch(url);
 
                 if (!response.ok) {
                     throw new Error(`サーバーエラー: ${response.status}`);
                 }
 
-                const data = await response.json();
+                const videos = await response.json();
+
+                // 成功表示
+                status.innerHTML = `<h3 style="color: #4CAF50;">接続成功！ (${TARGET_SERVER})</h3>`;
                 
-                status.innerHTML = `<h2 style="color:cyan">成功しました！</h2>`;
-                
-                // データ表示
-                data.slice(0, 5).forEach(video => {
+                // 動画を並べる
+                videos.forEach(video => {
                     list.innerHTML += `
-                        <div style="border:1px solid #333; margin:10px; padding:10px;">
-                            <img src="${PROXY + encodeURIComponent(video.videoThumbnails[0].url)}" width="150"><br>
-                            <b>${video.title}</b>
+                        <div style="background: #222; border-radius: 10px; overflow: hidden;">
+                            <img src="${video.videoThumbnails[0].url}" style="width: 100%; aspect-ratio: 16/9; object-fit: cover;">
+                            <div style="padding: 10px;">
+                                <h4 style="margin: 0 0 10px 0; font-size: 16px;">${video.title}</h4>
+                                <p style="color: #aaa; font-size: 12px;">再生回数: ${video.viewCountText || "不明"}</p>
+                            </div>
                         </div>
                     `;
                 });
 
-            } catch (err) {
-                console.error(err);
-                status.innerHTML += `<br><strong style="color:red">失敗: ${err.message}</strong>`;
-                status.innerHTML += `<br>ヒント: BraveのシールドをOFFにしてください`;
+            } catch (error) {
+                console.error(error);
+                status.innerHTML = `
+                    <h3 style="color: #ff5555;">接続失敗...</h3>
+                    <p>エラー内容: ${error.message}</p>
+                    <p>もしかすると、数分待つか、サーバーURLを予備のものに変えてみてください。</p>
+                `;
             }
         }
 
-        tryConnect();
+        loadPopularVideos();
     </script>
 </body>
 </html>
