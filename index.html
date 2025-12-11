@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Video Player</title>
+    <style>
+        body { font-family: sans-serif; background: #222; color: #fff; text-align: center; padding: 20px; }
+        input, select, button { padding: 10px; margin: 5px; border-radius: 5px; border: none; }
+        #video-container { margin-top: 20px; position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 800px; margin-left: auto; margin-right: auto; }
+        #video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+    </style>
+</head>
+<body>
+
+    <h1>Custom Video Player</h1>
+
+    <div>
+        <label>サーバー選択:</label>
+        <select id="instance-select">
+            <option value="https://invidious.io.lol">invidious.io.lol</option>
+            <option value="https://vid.puffyan.us">vid.puffyan.us</option>
+            <option value="https://inv.tux.pizza">inv.tux.pizza</option>
+            <option value="https://invidious.fdn.fr">invidious.fdn.fr</option>
+        </select>
+    </div>
+
+    <div>
+        <input type="text" id="video-id" placeholder="動画ID (例: dQw4w9WgXcQ)" style="width: 250px;">
+        <button onclick="loadVideo()">再生</button>
+    </div>
+    <p><small>※ YouTubeのURLではなく「v=」の後のIDを入力してください</small></p>
+
+    <div id="video-container">
+        </div>
+
+    <script>
+        function loadVideo() {
+            const videoIdInput = document.getElementById('video-id').value.trim();
+            const instance = document.getElementById('instance-select').value;
+            const container = document.getElementById('video-container');
+
+            // IDの簡易チェック（URLが入力された場合IDだけ抽出する処理を入れるとより親切です）
+            let videoId = videoIdInput;
+            if (videoIdInput.includes('v=')) {
+                videoId = videoIdInput.split('v=')[1].split('&')[0];
+            } else if (videoIdInput.includes('youtu.be/')) {
+                videoId = videoIdInput.split('youtu.be/')[1].split('?')[0];
+            }
+
+            if (!videoId) {
+                alert('動画IDを入力してください');
+                return;
+            }
+
+            // Invidiousの埋め込み用URLを作成
+            // URL形式: https://[インスタンス]/embed/[動画ID]
+            const embedUrl = `${instance}/embed/${videoId}`;
+
+            container.innerHTML = `<iframe src="${embedUrl}" allowfullscreen></iframe>`;
+        }
+    </script>
+
+</body>
+</html>
